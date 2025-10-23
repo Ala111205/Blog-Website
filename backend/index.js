@@ -9,8 +9,27 @@ import userRoutes from "./routes/userRoutes.js";
 dotenv.config();
 
 const app = express();
+
+const allowedOrigins = [
+  "https://blog-website-nine-lake.vercel.app",
+  "http://127.0.0.1:5500"                      
+];
+
+const corsOptions = {
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) callback(null, true);
+    else callback(new Error("❌ Not allowed by CORS"));
+  },
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  credentials: true,
+  optionsSuccessStatus: 200,
+};
+
+app.use(cors(corsOptions));
+
 app.use(express.json());
-app.use(cors());
 
 app.use("/api/posts", postRoutes);
 app.use("/api/comments", commentRoutes);

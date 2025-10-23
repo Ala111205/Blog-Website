@@ -51,10 +51,6 @@ body {
     font-size: 1.25rem;
 }
 
-.logo span {
-    color: #2563eb;
-}
-
 nav ul {
     min-width: 250px;
     list-style: none;

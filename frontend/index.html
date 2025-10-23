@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>My Tech Blog</title>
+  <link rel="stylesheet" type="text/css" href="styles.css" />
+</head>
+<body>
+  <div class="container">
+    <header class="site-header">
+        <div class="header-inner">
+        <a href="#" id="logo" class="logo">My <span>Tech</span> Blog</a>
+        <nav class="top-nav" aria-label="Main Navigation">
+            <ul>
+                <li><a href="#" id="homeBtn">Home</a></li>
+                <li><a href="#" id="aboutBtn">About</a></li>
+                <li><a href="#" id="contactBtn">Contact</a></li>
+                <li><a href="authentication/login.html" id="authLink">Login</a></li>
+            </ul>
+        </nav>
+        </div>
+    </header>
+
+    <main class="main-grid">
+        <aside class="sidebar">
+        <section class="search">
+            <label for="searchInput">Search posts</label>
+            <input id="searchInput" placeholder="Search by title, content, tag..." />
+        </section>
+
+        <section class="categories">
+            <h3>Categories</h3>
+            <ul id="categoryList">
+            <!-- categories populated by JS -->
+            </ul>
+            <button id="clearFilter" class="small-btn">Clear</button>
+        </section>
+
+        <section class="recent-posts">
+            <h3>All Posts</h3>
+            <ul id="postList" class="post-list">
+            <!-- list populated by JS -->
+            </ul>
+        </section>
+        </aside>
+
+        <section class="content-area" id="contentArea">
+        <!-- single-post view inserted by JS -->
+        <article id="postView" class="post-view">
+            <!-- populated by JS -->
+        </article>
+        </section>
+    </main>
+
+    <footer class="site-footer">
+        <div class="container">
+        <p>© <span id="year"></span> My Tech Blog — Built with HTML/CSS/JS</p>
+        </div>
+    </footer>
+  </div>
+
+  <script src="script.js" defer></script>
+</body>
+</html>

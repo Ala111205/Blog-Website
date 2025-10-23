@@ -22,6 +22,10 @@ body {
     gap: 15px;
 }
 
+.site-footer .container {
+    min-height: 0px;
+}
+
 .site-header {
     width: 100%;
     margin: 0 auto;

@@ -1,7 +1,7 @@
 const el = (qs) => document.querySelector(qs);
 const els = (qs) => document.querySelectorAll(qs);
 
-const API_URL = "http://localhost:8000";
+const API_URL = "https://blog-website-nhnr.onrender.com";
 
 let posts = [];
 let filteredPosts = [];

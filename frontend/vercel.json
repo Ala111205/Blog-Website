@@ -1,4 +1,9 @@
 {
-  "src": "/(.*)",
-  "dest": "/$1"
+  "version": 2,
+  "builds": [
+    { "src": "index.html", "use": "@vercel/static" },
+    { "src": "styles.css", "use": "@vercel/static" },
+    { "src": "script.js", "use": "@vercel/static" },
+    { "src": "authentication/*", "use": "@vercel/static" }
+  ]
 }

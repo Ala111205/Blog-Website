@@ -8,47 +8,47 @@
 
 **🔹 Core Blog Features**
 
-  🏠 Home page with latest posts sorted by creation date
+        🏠 Home page with latest posts sorted by creation date
 
-  ✍️ Add new blog posts with title, date, image, tags, and content
+        ✍️ Add new blog posts with title, date, image, tags, and content
 
-  🖊️ Edit or delete posts for the authenticated user who created them
+        🖊️ Edit or delete posts for the authenticated user who created them
 
-  📄 View full post content on separate post page
+        📄 View full post content on separate post page
 
-  📌 Tag-based categorization for filtering posts
+        📌 Tag-based categorization for filtering posts
 
-  🔍 Real-time keyword search across post titles and content
+        🔍 Real-time keyword search across post titles and content
 
-  🔒 Login & Signup with JWT authentication
+        🔒 Login & Signup with JWT authentication
 
-  🚪 Logout functionality with localStorage cleanup
+        🚪 Logout functionality with localStorage cleanup
 
 **🔹 Search & Filter Features**
 
-  🔎 Live search field to find posts by typing keywords
+        🔎 Live search field to find posts by typing keywords
 
-  🧠 Searches match:
+        🧠 Searches match:
 
-      Post title
+            Post title
 
-      Post content (all paragraphs)
+            Post content (all paragraphs)
 
-  🧹 Clear filter option to reset search results instantly
+        🧹 Clear filter option to reset search results instantly
 
-  🔁 Users can search again immediately after clearing without page reload
+        🔁 Users can search again immediately after clearing without page reload
 
 **🔹 Additional Features**
 
-  🌐 Responsive navigation bar with Home, Login, Logout, About, Contact links
+        🌐 Responsive navigation bar with Home, Login, Logout, About, Contact links
 
-  🖼️ Default image fallback for posts if no image is provided
+        🖼️ Default image fallback for posts if no image is provided
 
-  📝 Rich text content support with paragraph separation
+        📝 Rich text content support with paragraph separation
 
-  ⚡ Smooth scrolling to add/edit post form
+        ⚡ Smooth scrolling to add/edit post form
 
-  ✅ User validation: Only logged-in users can add, edit, or delete their posts
+        ✅ User validation: Only logged-in users can add, edit, or delete their posts
 
 **⚙️ Tech Stack:-**
 

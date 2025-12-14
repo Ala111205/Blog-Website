@@ -153,10 +153,47 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
 // apiFetch Posts from Backend 
-async function loadPosts() {
-  const posts = await apiFetch(`/api/posts`);
-  filteredPosts = [...posts];
-  return posts;
+
+// LOAD POSTS
+async function loadPosts({ force = false } = {}) {
+  try {
+    // Use cache first unless forced
+    if (!force) {
+      const cached = localStorage.getItem("posts");
+      if (cached) {
+        posts = JSON.parse(cached);
+        filteredPosts = [...posts];
+        return posts;
+      }
+    }
+
+    // Fetch from backend
+    const data = await apiFetch("/api/posts", { auth: false });
+
+    if (!Array.isArray(data)) throw new Error("Invalid posts response");
+
+    // Update state + cache
+    posts = data;
+    filteredPosts = [...posts];
+    localStorage.setItem("posts", JSON.stringify(posts));
+
+    return posts;
+  } catch (err) {
+    console.error("❌ loadPosts failed:", err);
+
+    // Fallback to cache if API fails
+    const cached = localStorage.getItem("posts");
+    if (cached) {
+      posts = JSON.parse(cached);
+      filteredPosts = [...posts];
+      return posts;
+    }
+
+    // Hard fallback
+    posts = [];
+    filteredPosts = [];
+    return [];
+  }
 }
 
 // Load Comments
@@ -172,14 +209,23 @@ async function loadComments(postId) {
 // Add Post
 async function addPost(post) {
   try {
-    const res = await apiFetch(`/api/posts`, {
+    const savedPost = await apiFetch("/api/posts", {
       method: "POST",
-      body: post
+      body: post,
     });
-    return res;
+
+    if (!savedPost || !savedPost._id)
+      throw new Error("Failed to save post on backend");
+
+    // Update local state + cache
+    posts.unshift(savedPost);
+    filteredPosts = [...posts];
+    localStorage.setItem("posts", JSON.stringify(posts));
+
+    return savedPost;
   } catch (err) {
     console.error("Error adding post:", err);
-    alert(`❌ Error: ${err.message}`);
+    alert(`❌ ${err.message}`);
     return null;
   }
 }
@@ -201,13 +247,23 @@ async function addComment(comment) {
 // Update Post
 async function updatePost(postId, updatedData) {
   try {
-    return await apiFetch(`/api/posts/${postId}`, {
+    const updatedPost = await apiFetch(`/api/posts/${postId}`, {
       method: "PUT",
-      body: updatedData
+      body: updatedData,
     });
+
+    if (!updatedPost || !updatedPost._id)
+      throw new Error("Failed to update post on backend");
+
+    // Update local state + cache
+    posts = posts.map(p => (p._id === postId ? updatedPost : p));
+    filteredPosts = [...posts];
+    localStorage.setItem("posts", JSON.stringify(posts));
+
+    return updatedPost;
   } catch (err) {
     console.error("Error updating post:", err);
-    alert(err.message || "Failed to update post");
+    alert(`❌ ${err.message}`);
     return null;
   }
 }
@@ -231,17 +287,18 @@ async function deletePost(postId) {
   try {
     await apiFetch(`/api/posts/${postId}`, { method: "DELETE" });
 
-    posts = await loadPosts();
-    filteredPosts = posts;
+    // Update local state + cache
+    posts = posts.filter(p => p._id !== postId);
+    filteredPosts = [...posts];
+    localStorage.setItem("posts", JSON.stringify(posts));
 
     renderCategoryList();
     renderPostList(filteredPosts);
 
-    el("#postView").innerHTML =
-      "<p>✅ Post deleted successfully.</p>";
+    el("#postView").innerHTML = "<p>✅ Post deleted successfully.</p>";
   } catch (err) {
     console.error("Error deleting post:", err);
-    alert(err.message || "Failed to delete post");
+    alert(`❌ ${err.message}`);
   }
 }
 
@@ -383,8 +440,16 @@ function applyFilters() {
   const searchTerm = el("#searchInput").value.trim().toLowerCase();
 
   filteredPosts = posts.filter(post => {
-    const matchesCategory = !activeCategory || post.tags.includes(activeCategory);
-    const matchesSearch = !searchTerm || post.title.toLowerCase().includes(searchTerm) || post.content.toLowerCase().includes(searchTerm);
+    const matchesCategory =
+      !activeCategory || post.tags.includes(activeCategory);
+
+    const contentText = post.content.join(" ").toLowerCase();
+
+    const matchesSearch =
+      !searchTerm ||
+      post.title.toLowerCase().includes(searchTerm) ||
+      contentText.includes(searchTerm);
+
     return matchesCategory && matchesSearch;
   });
 

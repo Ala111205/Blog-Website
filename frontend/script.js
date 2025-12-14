@@ -21,27 +21,77 @@ function escapeHtml(s) {
     .replaceAll("'", "&#039;");
 }
 
+async function apiFetch(
+  path,
+  { method = "GET", body, auth = true } = {},
+  retries = 3,
+  backoff = 800
+) {
+  const headers = { "Content-Type": "application/json" };
+
+  if (auth) {
+    const token = localStorage.getItem("token");
+    if (token) headers.Authorization = `Bearer ${token}`;
+  }
+
+  try {
+    const res = await fetch(`${API_URL}${path}`, {
+      method,
+      headers,
+      body: body ? JSON.stringify(body) : undefined,
+    });
+
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      // retry ONLY for server errors
+      if (res.status >= 500 && retries > 0) {
+        await new Promise(r => setTimeout(r, backoff));
+        return apiFetch(path, { method, body, auth }, retries - 1, backoff * 2);
+      }
+      throw new Error(data.message || `HTTP ${res.status}`);
+    }
+
+    return data;
+  } catch (err) {
+    if (retries > 0) {
+      await new Promise(r => setTimeout(r, backoff));
+      return apiFetch(path, { method, body, auth }, retries - 1, backoff * 2);
+    }
+    throw err;
+  }
+}
+
 // Handle Login Form
 const loginForm = el("#loginForm");
+
 if (loginForm) {
   loginForm.addEventListener("submit", async (e) => {
     e.preventDefault();
-    const email = el("#email").value;
-    const password = el("#password").value;
 
-    const res = await fetch(`${API_URL}/api/auth/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ email, password }),
-    });
-    const data = await res.json();
-    if (res.ok) {
+    const email = el("#email").value.trim();
+    const password = el("#password").value.trim();
+
+    if (!email || !password) {
+      alert("Email and password are required", "error");
+      return;
+    }
+
+    try {
+      const data = await apiFetch("/api/auth/login", {
+        method: "POST",
+        auth: false,
+        body: { email, password }
+      });
+
       localStorage.setItem("user", JSON.stringify(data.user));
       localStorage.setItem("token", data.token);
-      alert("✅ Logged in successfully!");
+
+      alert("Logged in successfully");
       window.location.href = "../index.html";
-    } else {
-      alert(data.message);
+
+    } catch (err) {
+      alert(err.message || "Login failed", "error");
     }
   });
 }
@@ -51,66 +101,60 @@ const signupForm = el("#signupForm");
 if (signupForm) {
   signupForm.addEventListener("submit", async (e) => {
     e.preventDefault();
-    const name = el("#name").value;
-    const email = el("#email").value;
-    const password = el("#password").value;
 
-    const res = await fetch(`${API_URL}/api/auth/signup`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ name, email, password }),
-    });
-    const data = await res.json();
-    if (res.ok) {
-      alert("🎉 Signup successful! Please login now.");
+    const name = el("#name").value.trim();
+    const email = el("#email").value.trim();
+    const password = el("#password").value.trim();
+
+    if (!name || !email || !password) {
+      alert("All fields are required");
+      return;
+    }
+
+    try {
+      await apiFetch("/api/auth/signup", {
+        method: "POST",
+        auth: false,
+        body: { name, email, password }
+      });
+
+      alert("Signup successful! Please login.");
       window.location.href = "../authentication/login.html";
-    } else {
-      alert(data.message);
+    } catch (err) {
+      alert(err.message || "Signup failed");
     }
   });
 }
 
 document.addEventListener("DOMContentLoaded", () => {
   const currentUser = JSON.parse(localStorage.getItem("user"));
-  const token = localStorage.getItem("token");
   const authLink = document.getElementById("authLink");
 
-  if (currentUser) {
-    const logoutBtn = document.createElement("button");
-    logoutBtn.textContent = "Logout";
-    logoutBtn.className = "logout-btn";
-    logoutBtn.addEventListener("click", async () => {
-      if (token) {
-        try {
-          const res = await fetch(`${API_URL}/api/auth/me`, {
-            method: "DELETE",
-            headers: { Authorization: `Bearer ${token}` },
-          });
+  if (!currentUser || !authLink) return;
 
-          if (!res.ok) throw new Error("Failed to delete user");
+  const logoutBtn = document.createElement("button");
+  logoutBtn.textContent = "Logout";
+  logoutBtn.className = "logout-btn";
 
-          alert("Your account has been deleted and you are logged out!");
-        } catch (err) {
-          alert(`Error: ${err.message}`);
-        }
-      }
+  logoutBtn.addEventListener("click", () => {
+    // Clear auth state
+    localStorage.removeItem("user");
+    localStorage.removeItem("token");
 
-      localStorage.removeItem("user");
-      localStorage.removeItem("token");
+    alert("Logged out successfully");
 
-      window.location.href = "index.html";
-    });
-    
-    const li = authLink.parentElement;
-    li.replaceChild(logoutBtn, authLink);
-  }
+    // Redirect
+    window.location.href = "index.html";
+  });
+
+  const li = authLink.parentElement;
+  li.replaceChild(logoutBtn, authLink);
 });
 
 
-// Fetch Posts from Backend 
+// apiFetch Posts from Backend 
 async function loadPosts() {
-  const res = await fetch(`${API_URL}/api/posts`);
-  posts = await res.json();
+  const posts = await apiFetch(`/api/posts`);
   filteredPosts = [...posts];
   return posts;
 }
@@ -118,9 +162,7 @@ async function loadPosts() {
 // Load Comments
 async function loadComments(postId) {
   try {
-    const res = await fetch(`${API_URL}/api/comments/${postId}`);
-    if (!res.ok) throw new Error("Failed to load comments");
-    return await res.json();
+    return await apiFetch(`/api/comments/${postId}`);
   } catch (err) {
     console.error("Error loading comments:", err);
     return [];
@@ -130,18 +172,11 @@ async function loadComments(postId) {
 // Add Post
 async function addPost(post) {
   try {
-    const token = localStorage.getItem("token");
-    const res = await fetch(`${API_URL}/api/posts`, {
+    const res = await apiFetch(`/api/posts`, {
       method: "POST",
-      headers: { 
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`
-      },
-      body: JSON.stringify(post)
+      body: post
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || "Failed to add post");
-    return data;
+    return res;
   } catch (err) {
     console.error("Error adding post:", err);
     alert(`❌ Error: ${err.message}`);
@@ -152,18 +187,10 @@ async function addPost(post) {
 // Add Comment
 async function addComment(comment) {
   try {
-    const token = localStorage.getItem("token");
-    const res = await fetch(`${API_URL}/api/comments`, {
+    return await apiFetch(`/api/comments`, {
       method: "POST",
-       headers: { 
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`
-      },
-      body: JSON.stringify(comment)
+      body: comment
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || "Failed to add comment");
-    return data;
   } catch (err) {
     console.error("Error adding comment:", err);
     alert(`❌ Error: ${err.message}`);
@@ -174,20 +201,13 @@ async function addComment(comment) {
 // Update Post
 async function updatePost(postId, updatedData) {
   try {
-    const res = await fetch(`${API_URL}/api/posts/${postId}`, {
+    return await apiFetch(`/api/posts/${postId}`, {
       method: "PUT",
-       headers: { 
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`
-      },
-      body: JSON.stringify(updatedData)
+      body: updatedData
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || "Failed to update post");
-    return data;
   } catch (err) {
     console.error("Error updating post:", err);
-    alert(`❌ Error: ${err.message}`);
+    alert(err.message || "Failed to update post");
     return null;
   }
 }
@@ -195,20 +215,13 @@ async function updatePost(postId, updatedData) {
 // Update Comment
 async function updateComment(commentId, updatedData) {
   try {
-    const res = await fetch(`${API_URL}/api/comments/${commentId}`, {
+    return await apiFetch(`/api/comments/${commentId}`, {
       method: "PUT",
-       headers: { 
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`
-      },
-      body: JSON.stringify(updatedData)
+      body: updatedData
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || "Failed to update comment");
-    return data;
   } catch (err) {
     console.error("Error updating comment:", err);
-    alert(`❌ Error: ${err.message}`);
+    alert(err.message || "Failed to update comment");
     return null;
   }
 }
@@ -216,54 +229,33 @@ async function updateComment(commentId, updatedData) {
 // Delete Post
 async function deletePost(postId) {
   try {
-    const res = await fetch(`${API_URL}/api/posts/${postId}`, { 
-      method: "DELETE",
-      headers: { Authorization: `Bearer ${token}` }, 
-    });
-    const data = await res.json();
-
-    if (!res.ok) {
-      throw new Error(data.message || "Failed to delete post");
-    }
+    await apiFetch(`/api/posts/${postId}`, { method: "DELETE" });
 
     posts = await loadPosts();
     filteredPosts = posts;
 
-    renderPostList(filteredPosts);
     renderCategoryList();
-    
-    el("#postView").innerHTML = "<p>✅ Post deleted successfully. Select another post or add a new one.</p>";
+    renderPostList(filteredPosts);
+
+    el("#postView").innerHTML =
+      "<p>✅ Post deleted successfully.</p>";
   } catch (err) {
     console.error("Error deleting post:", err);
-    alert(`❌ Error: ${err.message}`);
+    alert(err.message || "Failed to delete post");
   }
 }
 
 // Delete Comment
 async function deleteComment(commentId, postId) {
   try {
-    const res = await fetch(`${API_URL}/api/comments/${commentId}`, {
-      method: "DELETE",
-      headers: { 
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`
-       },
+    await apiFetch(`/api/comments/${commentId}`, {
+      method: "DELETE"
     });
 
-    const data = await res.json();
-
-    if (!res.ok) {
-      throw new Error(data.message || "Failed to delete comment");
-    }
-
-    console.log("🗑 Comment deleted:", data);
-
-    const comments = await loadComments(postId);
-    return comments;
-
+    return await loadComments(postId);
   } catch (err) {
-    console.error("❌ Error deleting comment:", err);
-    alert(`Error: ${err.message}`);
+    console.error("Error deleting comment:", err);
+    alert(err.message || "Failed to delete comment");
     return [];
   }
 }

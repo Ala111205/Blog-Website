@@ -2,7 +2,7 @@
 
       A modern full-stack Blog Website allowing users to register, login, add, edit, and delete posts, with tags, images, and content formatting — featuring authentication, role-based post management, keyword search, and a responsive, interactive UI.
 
-**Repository Link:-** https://blog-website-nine-lake.vercel.app/
+**Live Demo:-** https://blog-website-nine-lake.vercel.app/
 
 **🚀 Features:-**
 
